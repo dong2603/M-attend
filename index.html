@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 근태 관리 시스템</title>
+  <!-- Google Fonts & Icon -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- SheetJS for Excel Download -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+  <!-- Background Elements for Visual Depth -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="glass-header">
+      <div class="logo">
+        <i class="fa-solid fa-business-time"></i>
+        <span>Smart<span class="highlight">Work</span></span>
+      </div>
+      <div class="header-actions">
+        <button id="admin-entry-btn" class="btn btn-icon-text btn-outline">
+          <i class="fa-solid fa-lock"></i> 관리자 모드
+        </button>
+        <button id="logout-btn" class="btn btn-icon-text btn-outline hidden">
+          <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- 1. LOGIN SCREEN -->
+      <section id="login-section" class="glass-card active">
+        <div class="card-header">
+          <h2>근무자 로그인</h2>
+          <p>사원명과 사번을 입력하여 로그인해 주세요.</p>
+        </div>
+        <form id="login-form">
+          <div class="input-group">
+            <label for="emp-name"><i class="fa-solid fa-user"></i> 이름</label>
+            <input type="text" id="emp-name" placeholder="예: 홍길동" required autocomplete="off">
+          </div>
+          <div class="input-group">
+            <label for="emp-id"><i class="fa-solid fa-id-card"></i> 사번</label>
+            <input type="text" id="emp-id" placeholder="예: 20260001" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            로그인 <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          </button>
+        </form>
+      </section>
+
+      <!-- 2. ATTENDANCE DASHBOARD -->
+      <section id="dashboard-section" class="glass-card hidden">
+        <div class="welcome-box">
+          <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
+          <div>
+            <h3>반갑습니다, <span id="user-display-name" class="highlight-text">홍길동</span> 님</h3>
+            <p class="sub-text">사번: <span id="user-display-id">20260001</span></p>
+          </div>
+        </div>
+
+        <!-- Live Clock -->
+        <div class="clock-card">
+          <div id="live-date" class="date-text">2026년 8월 3일 월요일</div>
+          <div id="live-time" class="time-text">12:00:00</div>
+        </div>
+
+        <div class="attendance-action-panel">
+          <h3>근무 형태 선택 및 출근</h3>
+          <p class="shift-guide">기준 시간보다 1분 이상 늦을 경우 지각으로 기록됩니다.</p>
+          
+          <div class="shift-selector">
+            <input type="radio" id="shift-normal" name="shift-type" value="일반" checked>
+            <label for="shift-normal" class="shift-option">
+              <i class="fa-solid fa-sun icon"></i>
+              <span class="label">일반 근무</span>
+              <span class="time">09:30 기준</span>
+            </label>
+
+            <input type="radio" id="shift-day" name="shift-type" value="주간">
+            <label for="shift-day" class="shift-option">
+              <i class="fa-solid fa-cloud-sun icon"></i>
+              <span class="label">주간 근무</span>
+              <span class="time">07:00 기준</span>
+            </label>
+
+            <input type="radio" id="shift-afternoon" name="shift-type" value="오후">
+            <label for="shift-afternoon" class="shift-option">
+              <i class="fa-solid fa-mug-saucer icon"></i>
+              <span class="label">오후 근무</span>
+              <span class="time">12:30 기준</span>
+            </label>
+
+            <input type="radio" id="shift-night" name="shift-type" value="야간">
+            <label for="shift-night" class="shift-option">
+              <i class="fa-solid fa-moon icon"></i>
+              <span class="label">야간 근무</span>
+              <span class="time">21:15 기준</span>
+            </label>
+          </div>
+
+          <button id="check-in-btn" class="btn btn-success btn-lg btn-block">
+            <i class="fa-solid fa-check-double"></i> 출근하기
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. ADMIN PANEL -->
+      <section id="admin-section" class="glass-card glass-card-lg hidden">
+        <div class="admin-header">
+          <h2><i class="fa-solid fa-gauge-high"></i> 관리자 대시보드</h2>
+          <button id="admin-close-btn" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-chevron-left"></i> 근무자 화면으로
+          </button>
+        </div>
+
+        <!-- Admin Authentication (Overlay or Inline card) -->
+        <div id="admin-auth-box" class="admin-auth">
+          <p>관리자 비밀번호를 입력해주세요.</p>
+          <div class="inline-form">
+            <input type="password" id="admin-password-input" placeholder="비밀번호 입력 (초기: admin1234)">
+            <button id="admin-login-submit" class="btn btn-primary">확인</button>
+          </div>
+          <span id="admin-auth-error" class="error-msg"></span>
+        </div>
+
+        <!-- Admin Main Content (Tabs) -->
+        <div id="admin-main-content" class="hidden">
+          <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="tab-records"><i class="fa-solid fa-list-check"></i> 출근 기록</button>
+            <button class="tab-btn" data-tab="tab-employees"><i class="fa-solid fa-users"></i> 직원 관리</button>
+            <button class="tab-btn" data-tab="tab-settings"><i class="fa-solid fa-gears"></i> 시스템 설정</button>
+          </div>
+
+          <!-- Tab Content: Records -->
+          <div id="tab-records" class="tab-content active">
+            <div class="table-filters">
+              <div class="filter-group">
+                <label>날짜 선택</label>
+                <input type="date" id="filter-date">
+              </div>
+              <div class="filter-group">
+                <label>사번 검색</label>
+                <input type="text" id="filter-emp-id" placeholder="사번 입력">
+              </div>
+              <div class="filter-actions">
+                <button id="btn-search-records" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+                <button id="btn-reset-filters" class="btn btn-outline"><i class="fa-solid fa-rotate-left"></i> 초기화</button>
+                <button id="btn-export-excel" class="btn btn-success"><i class="fa-solid fa-file-excel"></i> 엑셀 다운로드</button>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>날짜 및 시간</th>
+                    <th>사번</th>
+                    <th>이름</th>
+                    <th>근무 형태</th>
+                    <th>지각 여부</th>
+                    <th>접속 IP</th>
+                  </tr>
+                </thead>
+                <tbody id="attendance-table-body">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+              <div id="no-records-msg" class="empty-table hidden">조회된 기록이 없습니다.</div>
+            </div>
+          </div>
+
+          <!-- Tab Content: Employees -->
+          <div id="tab-employees" class="tab-content">
+            <div class="split-layout">
+              <div class="layout-side glass-inner">
+                <h3><i class="fa-solid fa-user-plus"></i> 신규 직원 등록</h3>
+                <form id="new-employee-form">
+                  <div class="input-group">
+                    <label for="new-emp-name">이름</label>
+                    <input type="text" id="new-emp-name" placeholder="이름 입력" required>
+                  </div>
+                  <div class="input-group">
+                    <label for="new-emp-id">사번</label>
+                    <input type="text" id="new-emp-id" placeholder="사번 입력 (예: 20260005)" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-block">등록하기</button>
+                </form>
+              </div>
+              <div class="layout-main table-wrapper">
+                <h3><i class="fa-solid fa-address-book"></i> 직원 명부</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>사번</th>
+                      <th>이름</th>
+                      <th>등록일자</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employee-table-body">
+                    <!-- Dynamic employees -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content: Settings -->
+          <div id="tab-settings" class="tab-content">
+            <div class="settings-container">
+              <div class="settings-card">
+                <h3><i class="fa-solid fa-shield-halved"></i> 네트워크 접근 통제 (IP 제한)</h3>
+                <p class="settings-desc">회사 공인 IP 대역에서만 출근 체크를 하도록 제한합니다. 비활성화 시 모든 IP에서 출근할 수 있습니다.</p>
+                
+                <div class="setting-row">
+                  <span class="setting-label">IP 제한 상태</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="setting-ip-toggle">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-row vertical">
+                  <label for="setting-allowed-ips">허용 IP 목록 (쉼표로 구분)</label>
+                  <textarea id="setting-allowed-ips" rows="3" placeholder="예: 210.94.22.56, 12.34.56.78"></textarea>
+                  <span class="tip-msg">현재 접속한 네트워크 IP: <strong id="current-detected-ip">127.0.0.1</strong></span>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <h3><i class="fa-solid fa-key"></i> 관리자 비밀번호 변경</h3>
+                <div class="input-group">
+                  <label for="setting-new-password">새 비밀번호</label>
+                  <input type="password" id="setting-new-password" placeholder="새 비밀번호 입력">
+                </div>
+                <div class="input-group">
+                  <label for="setting-new-password-confirm">새 비밀번호 확인</label>
+                  <input type="password" id="setting-new-password-confirm" placeholder="새 비밀번호 다시 입력">
+                </div>
+              </div>
+
+              <button id="btn-save-settings" class="btn btn-primary btn-lg"><i class="fa-solid fa-floppy-disk"></i> 설정 저장</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="app-footer">
+      <p>접속 IP: <span id="footer-client-ip" class="ip-indicator">127.0.0.1</span> | © 2026 Smart Attendance System.</p>
+    </footer>
+  </div>
+
+  <!-- 4. MODALS & NOTIFICATIONS -->
+  <!-- Check-in Result Modal -->
+  <div id="result-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div id="modal-status-icon" class="modal-icon text-success">
+        <i class="fa-regular fa-circle-check"></i>
+      </div>
+      <h3 id="modal-title">출근 처리 완료</h3>
+      <div class="modal-body">
+        <div class="result-details">
+          <div class="res-row">
+            <span class="res-lbl">근무자</span>
+            <span class="res-val" id="res-name">홍길동 (20260001)</span>
+          </div>
+          <div class="res-row">
+            <span class="res-lbl">근무 형태</span>
+            <span class="res-val" id="res-shift">일반 근무</span>
+          </div>
+          <div class="res-row">
+            <span class="res-lbl">출근 시각</span>
+            <span class="res-val" id="res-time">2026-08-03 09:15:30</span>
+          </div>
+          <div class="res-row">
+            <span class="res-lbl">지각 여부</span>
+            <span class="res-val badge" id="res-late-badge">정상</span>
+          </div>
+        </div>
+      </div>
+      <button id="modal-close-btn" class="btn btn-primary btn-block">확인</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">
+    <i id="toast-icon" class="fa-solid fa-circle-info"></i>
+    <span id="toast-msg">알림 메시지</span>
+  </div>
+
+  <!-- App Business Logic Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
+
+
+
