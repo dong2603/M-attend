@@ -70,8 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const filterStartDate = document.getElementById('filter-start-date');
   const filterEndDate = document.getElementById('filter-end-date');
-  const filterEmpId = document.getElementById('filter-emp-id');
+  const filterEmpName = document.getElementById('filter-emp-name');
   const btnSearchRecords = document.getElementById('btn-search-records');
+
 
   const btnResetFilters = document.getElementById('btn-reset-filters');
   const btnExportExcel = document.getElementById('btn-export-excel');
@@ -677,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchAttendanceRecords() {
     const startDate = filterStartDate.value;
     const endDate = filterEndDate.value;
-    const empId = filterEmpId.value.trim();
+    const empName = filterEmpName.value.trim();
 
     try {
       let query = supabaseClient.from('attendance').select('*');
@@ -688,11 +689,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (endDate) {
         query = query.lte('check_in_time', `${endDate} 23:59:59`);
       }
-      if (empId) {
-        query = query.eq('employee_id', empId);
+      if (empName) {
+        query = query.ilike('name', `%${empName}%`);
       }
 
       const { data: records, error } = await query.order('check_in_time', { ascending: false });
+
 
       if (error) throw error;
 
@@ -732,15 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  btnSearchRecords.addEventListener('click', fetchAttendanceRecords);
   btnResetFilters.addEventListener('click', () => {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     filterStartDate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     filterEndDate.value = now.toISOString().split('T')[0];
-    filterEmpId.value = '';
+    filterEmpName.value = '';
     fetchAttendanceRecords();
   });
+
 
 
   // 2. Fetch Employee List
