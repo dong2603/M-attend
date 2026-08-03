@@ -168,6 +168,7 @@
                     <th>이름</th>
                     <th>근무 형태</th>
                     <th>지각 여부</th>
+                    <th>지각 사유</th>
                     <th>접속 IP</th>
                   </tr>
                 </thead>
@@ -292,6 +293,22 @@
       <button id="modal-close-btn" class="btn btn-primary btn-block">확인</button>
     </div>
   </div>
+
+  <!-- Late Reason Input Modal -->
+  <div id="late-reason-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-icon text-danger">
+        <i class="fa-solid fa-circle-exclamation"></i>
+      </div>
+      <h3>지각 사유 입력</h3>
+      <p class="sub-text">기준 시간보다 5분 이상 늦었습니다. 지각 사유를 입력해 주세요.</p>
+      <div class="modal-body">
+        <textarea id="late-reason-input" rows="3" placeholder="예: 교통 지연, 병원 방문, 개인 사정 등 사유를 적어주세요." style="width: 100%; margin-top: 15px;"></textarea>
+      </div>
+      <button id="btn-submit-late" class="btn btn-primary btn-block">사유 등록 및 출근 완료</button>
+    </div>
+  </div>
+
 
   <!-- Toast Notification -->
   <div id="toast" class="toast hidden">

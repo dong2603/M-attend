@@ -365,7 +365,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('로그아웃되었습니다.');
   });
 
-  // 3. Record Attendance (Supabase Port with IP restriction & Clock Sync)
+  // 3. Record Attendance (Supabase Port with IP restriction, Clock Sync & Late Reason Modal)
+  let pendingCheckInData = null;
+
   checkInBtn.addEventListener('click', async () => {
     if (!currentUser || !supabaseClient) return;
 
@@ -441,24 +443,93 @@ document.addEventListener('DOMContentLoaded', () => {
       // D. Determine Late status
       const status = checkLateStatus(selectedShift, verifiedTime);
 
-      // E. Write to Supabase
+      if (status.isLate) {
+        // [지각 발생] 지각 사유 입력 모달 띄우기
+        pendingCheckInData = {
+          shiftType: selectedShift,
+          verifiedTime,
+          clientIp: currentClientIp,
+          isLate: true,
+          checkInTimeStr: status.checkInTimeStr
+        };
+        
+        document.getElementById('late-reason-input').value = '';
+        document.getElementById('late-reason-modal').classList.remove('hidden');
+        checkInBtn.disabled = false;
+        checkInBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> 출근하기';
+      } else {
+        // [정상 출근] 즉시 데이터 등록 진행
+        await executeCheckIn(selectedShift, verifiedTime, currentClientIp, false, status.checkInTimeStr, null);
+      }
+
+    } catch (err) {
+      console.error(err);
+      showToast('출근 처리 도중 오류가 발생했습니다.', 'error');
+      checkInBtn.disabled = false;
+      checkInBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> 출근하기';
+    }
+  });
+
+  // 지각 사유 등록 버튼 클릭 핸들러
+  document.getElementById('btn-submit-late').addEventListener('click', async () => {
+    if (!pendingCheckInData || !currentUser) return;
+    
+    const reasonInput = document.getElementById('late-reason-input');
+    const reasonText = reasonInput.value.trim();
+
+    if (!reasonText) {
+      showToast('지각 사유를 입력해 주세요.', 'error');
+      reasonInput.focus();
+      return;
+    }
+
+    try {
+      const submitBtn = document.getElementById('btn-submit-late');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '등록 중...';
+
+      document.getElementById('late-reason-modal').classList.add('hidden');
+      
+      await executeCheckIn(
+        pendingCheckInData.shiftType,
+        pendingCheckInData.verifiedTime,
+        pendingCheckInData.clientIp,
+        true,
+        pendingCheckInData.checkInTimeStr,
+        reasonText
+      );
+
+      pendingCheckInData = null;
+    } catch (err) {
+      console.error(err);
+      showToast('지각 사유 저장 중 오류가 발생했습니다.', 'error');
+    } finally {
+      const submitBtn = document.getElementById('btn-submit-late');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '사유 등록 및 출근 완료';
+    }
+  });
+
+  // 최종 Supabase 기록 실행 공통 함수
+  async function executeCheckIn(shiftType, verifiedTime, clientIp, isLate, checkInTimeStr, lateReason) {
+    try {
       const { data: attendanceRecord, error: insertError } = await supabaseClient
         .from('attendance')
         .insert([{
           employee_id: currentUser.employee_id,
           name: currentUser.name,
-          shift_type: selectedShift,
-          check_in_time: status.checkInTimeStr,
-          is_late: status.isLate,
-          ip_address: currentClientIp
+          shift_type: shiftType,
+          check_in_time: checkInTimeStr,
+          is_late: isLate,
+          ip_address: clientIp,
+          late_reason: lateReason
         }])
         .select()
         .single();
 
       if (insertError) throw insertError;
 
-      // Show Result
-      showToast(status.isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.', 'success');
+      showToast(isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.', 'success');
       
       openResultModal({
         success: true,
@@ -467,11 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shiftType: attendanceRecord.shift_type,
         checkInTime: attendanceRecord.check_in_time,
         isLate: attendanceRecord.is_late === true,
-        message: status.isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.'
-      });
-
-    } catch (err) {
-      console.error(err);
       showToast('출근 처리 도중 오류가 발생했습니다.', 'error');
     } finally {
       checkInBtn.disabled = false;
@@ -632,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
       const isLateText = rec.is_late ? '지각' : '정상';
       const badgeClass = rec.is_late ? 'badge badge-danger' : 'badge badge-success';
+      const lateReasonText = rec.late_reason || '-';
       
       tr.innerHTML = `
         <td>${rec.check_in_time}</td>
@@ -639,6 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${rec.name}</td>
         <td>${rec.shift_type}</td>
         <td><span class="${badgeClass}">${isLateText}</span></td>
+        <td>${lateReasonText}</td>
         <td><code>${rec.ip_address || '-'}</code></td>
       `;
       attendanceTableBody.appendChild(tr);
@@ -805,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
       '이름': rec.name,
       '근무 형태': rec.shift_type,
       '지각 여부': rec.is_late ? '지각' : '정상',
+      '지각 사유': rec.late_reason || '',
       '접속 IP': rec.ip_address || ''
     }));
 
