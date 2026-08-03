@@ -68,9 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
   
-  const filterDate = document.getElementById('filter-date');
+  const filterStartDate = document.getElementById('filter-start-date');
+  const filterEndDate = document.getElementById('filter-end-date');
   const filterEmpId = document.getElementById('filter-emp-id');
   const btnSearchRecords = document.getElementById('btn-search-records');
+
   const btnResetFilters = document.getElementById('btn-reset-filters');
   const btnExportExcel = document.getElementById('btn-export-excel');
   const attendanceTableBody = document.getElementById('attendance-table-body');
@@ -120,9 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
       showLogin();
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    filterDate.value = today;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const firstDay = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    const today = now.toISOString().split('T')[0];
+    
+    filterStartDate.value = firstDay;
+    filterEndDate.value = today;
   }
+
 
   // --- VIEW ROUTING ---
   function showLogin() {
@@ -667,14 +675,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 1. Fetch Logs
   async function fetchAttendanceRecords() {
-    const date = filterDate.value;
+    const startDate = filterStartDate.value;
+    const endDate = filterEndDate.value;
     const empId = filterEmpId.value.trim();
 
     try {
       let query = supabaseClient.from('attendance').select('*');
       
-      if (date) {
-        query = query.like('check_in_time', `${date}%`);
+      if (startDate) {
+        query = query.gte('check_in_time', `${startDate} 00:00:00`);
+      }
+      if (endDate) {
+        query = query.lte('check_in_time', `${endDate} 23:59:59`);
       }
       if (empId) {
         query = query.eq('employee_id', empId);
@@ -691,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('출근 기록 로드 실패', 'error');
     }
   }
+
 
   function renderAttendanceTable(records) {
     attendanceTableBody.innerHTML = '';
@@ -721,10 +734,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnSearchRecords.addEventListener('click', fetchAttendanceRecords);
   btnResetFilters.addEventListener('click', () => {
-    filterDate.value = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    filterStartDate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    filterEndDate.value = now.toISOString().split('T')[0];
     filterEmpId.value = '';
     fetchAttendanceRecords();
   });
+
 
   // 2. Fetch Employee List
   async function fetchEmployees() {
@@ -887,10 +904,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, '출근 기록');
 
-    const dateStr = filterDate.value || new Date().toISOString().split('T')[0];
-    const filename = `근태기록_${dateStr}.xlsx`;
+    const startStr = filterStartDate.value || '';
+    const endStr = filterEndDate.value || '';
+    const filename = `근태기록_${startStr}_to_${endStr}.xlsx`;
 
     try {
+
       XLSX.writeFile(workbook, filename);
       showToast('엑셀 파일이 다운로드되었습니다.', 'success');
     } catch (err) {
