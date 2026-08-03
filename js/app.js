@@ -538,12 +538,18 @@ document.addEventListener('DOMContentLoaded', () => {
         shiftType: attendanceRecord.shift_type,
         checkInTime: attendanceRecord.check_in_time,
         isLate: attendanceRecord.is_late === true,
+        message: isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.'
+      });
+
+    } catch (err) {
+      console.error(err);
       showToast('출근 처리 도중 오류가 발생했습니다.', 'error');
     } finally {
       checkInBtn.disabled = false;
       checkInBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> 출근하기';
     }
-  });
+  }
+
 
   // --- RESULT MODAL ---
   function openResultModal(details) {
