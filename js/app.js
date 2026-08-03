@@ -283,10 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
         limitTimeStr = '09:30';
     }
 
-    // Late if currentMinutes is strictly greater than limitMinutes
-    const isLate = currentMinutes > limitMinutes;
+    // 4 minutes 59 seconds grace period: Late if currentMinutes is greater than or equal to (limitMinutes + 5)
+    const isLate = currentMinutes >= (limitMinutes + 5);
 
     return {
+
+
       isLate,
       checkInTimeStr,
       limitTimeStr
