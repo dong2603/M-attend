@@ -104,8 +104,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastIcon = document.getElementById('toast-icon');
   const toastMsg = document.getElementById('toast-msg');
 
-  const myRecordsTableBody = document.getElementById('my-records-table-body');
-  const myNoRecordsMsg = document.getElementById('my-no-records-msg');
+  // Personal history navigation and elements
+  const userTabsNav = document.getElementById('user-tabs-nav');
+  const userTabButtons = document.querySelectorAll('.user-tab-btn');
+  const userTabContents = document.querySelectorAll('.user-tab-content');
+  const myFilterStartDate = document.getElementById('my-filter-start-date');
+  const myFilterEndDate = document.getElementById('my-filter-end-date');
+  const btnSearchMyRecords = document.getElementById('btn-search-my-records');
+  const btnResetMyFilters = document.getElementById('btn-reset-my-filters');
+  const btnExportMyExcel = document.getElementById('btn-export-my-excel');
+  const myHistoryTableBody = document.getElementById('my-history-table-body');
+  const myHistoryNoRecordsMsg = document.getElementById('my-history-no-records-msg');
+
+  let myHistoryRecords = []; // Store fetched personal logs
+
 
 
   // --- INITIALIZATION ---
@@ -134,7 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     filterStartDate.value = firstDay;
     filterEndDate.value = today;
+
+    myFilterStartDate.value = firstDay;
+    myFilterEndDate.value = today;
   }
+
 
 
   // --- VIEW ROUTING ---
@@ -164,9 +180,20 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.classList.remove('hidden');
     adminEntryBtn.classList.remove('hidden');
 
-    // 나의 최근 출근 기록 조회
-    fetchMyAttendanceRecords();
+    // 탭 상태 초기화 (출근 등록 탭을 기본값으로 활성화)
+    userTabButtons.forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-user-tab="checkin"]').classList.add('active');
+    userTabContents.forEach(c => {
+      if (c.id === 'user-tab-checkin') {
+        c.classList.add('active');
+        c.classList.remove('hidden');
+      } else {
+        c.classList.add('hidden');
+        c.classList.remove('active');
+      }
+    });
   }
+
 
 
   function showAdminPanel() {
@@ -558,10 +585,13 @@ document.addEventListener('DOMContentLoaded', () => {
         message: isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.'
       });
 
-      // 내 출근 기록 실시간 새로고침
-      fetchMyAttendanceRecords();
+      // 출근 이력 새로고침 (이력 조회 탭이 활성화되어 있을 때 갱신)
+      if (document.querySelector('[data-user-tab="history"]').classList.contains('active')) {
+        fetchMyHistoryRecords();
+      }
 
     } catch (err) {
+
 
       console.error(err);
       showToast('출근 처리 도중 오류가 발생했습니다.', 'error');
@@ -686,51 +716,95 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 0. Fetch Personal Logs
-  async function fetchMyAttendanceRecords() {
+  // 0. Fetch Personal Logs (Full search with Start/End date)
+  async function fetchMyHistoryRecords() {
     if (!currentUser || !supabaseClient) return;
 
+    const start = myFilterStartDate.value;
+    const end = myFilterEndDate.value;
+
     try {
-      const { data: records, error } = await supabaseClient
-        .from('attendance')
-        .select('*')
-        .eq('employee_id', currentUser.employee_id)
-        .order('check_in_time', { ascending: false })
-        .limit(10);
+      let query = supabaseClient.from('attendance').select('*').eq('employee_id', currentUser.employee_id);
+      
+      if (start) {
+        query = query.gte('check_in_time', `${start} 00:00:00`);
+      }
+      if (end) {
+        query = query.lte('check_in_time', `${end} 23:59:59`);
+      }
+
+      const { data: records, error } = await query.order('check_in_time', { ascending: false });
 
       if (error) throw error;
 
-      myRecordsTableBody.innerHTML = '';
-
-      if (!records || records.length === 0) {
-        myNoRecordsMsg.classList.remove('hidden');
-        return;
-      }
-
-      myNoRecordsMsg.classList.add('hidden');
-
-      records.forEach(rec => {
-        const tr = document.createElement('tr');
-        const isLateText = rec.is_late ? '지각' : '정상';
-        const badgeClass = rec.is_late ? 'badge badge-danger' : 'badge badge-success';
-        const lateReasonText = rec.late_reason || '-';
-
-        tr.innerHTML = `
-          <td>${rec.check_in_time}</td>
-          <td>${rec.shift_type}</td>
-          <td><span class="${badgeClass}">${isLateText}</span></td>
-          <td>${lateReasonText}</td>
-        `;
-        myRecordsTableBody.appendChild(tr);
-      });
-
+      myHistoryRecords = records;
+      renderMyHistoryTable(records);
     } catch (err) {
-      console.error('내 출근 기록 로드 실패:', err);
+      console.error(err);
+      showToast('개인 기록 로드 실패', 'error');
+    }
+  }
+
+  function renderMyHistoryTable(records) {
+    myHistoryTableBody.innerHTML = '';
+    if (!records || records.length === 0) {
+      myHistoryNoRecordsMsg.classList.remove('hidden');
+      return;
+    }
+    myHistoryNoRecordsMsg.classList.add('hidden');
+
+    records.forEach(rec => {
+      const tr = document.createElement('tr');
+      const isLateText = rec.is_late ? '지각' : '정상';
+      const badgeClass = rec.is_late ? 'badge badge-danger' : 'badge badge-success';
+      const lateReasonText = rec.late_reason || '-';
+
+      tr.innerHTML = `
+        <td>${rec.check_in_time}</td>
+        <td>${rec.shift_type}</td>
+        <td><span class="${badgeClass}">${isLateText}</span></td>
+        <td>${lateReasonText}</td>
+        <td><code>${rec.ip_address || '-'}</code></td>
+      `;
+      myHistoryTableBody.appendChild(tr);
+    });
+  }
+
+  // Personal history excel exporter
+  function exportMyExcel() {
+    if (!myHistoryRecords || myHistoryRecords.length === 0) {
+      showToast('다운로드할 기록이 없습니다.', 'error');
+      return;
+    }
+
+    const formattedData = myHistoryRecords.map(rec => ({
+      '출근 일자 및 시각': rec.check_in_time,
+      '근무 형태': rec.shift_type,
+      '지각 여부': rec.is_late ? '지각' : '정상',
+      '지각 사유': rec.late_reason || '',
+      '접속 IP': rec.ip_address || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '내 출근 기록');
+
+    const startStr = myFilterStartDate.value || '';
+    const endStr = myFilterEndDate.value || '';
+    const filename = `내근태기록_${currentUser.name}_${startStr}_to_${endStr}.xlsx`;
+
+    try {
+      XLSX.writeFile(workbook, filename);
+      showToast('엑셀 파일이 다운로드되었습니다.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('엑셀 다운로드 도중 오류가 발생했습니다.', 'error');
     }
   }
 
   // 1. Fetch Logs
   async function fetchAttendanceRecords() {
+
 
     const startDate = filterStartDate.value;
     const endDate = filterEndDate.value;
@@ -790,7 +864,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 근무자용 하부 탭 버튼 바인딩 및 개인 리스너 등록
+  userTabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.userTab;
+      userTabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      userTabContents.forEach(c => {
+        if (c.id === `user-tab-${target}`) {
+          c.classList.add('active');
+          c.classList.remove('hidden');
+        } else {
+          c.classList.add('hidden');
+          c.classList.remove('active');
+        }
+      });
+
+      if (target === 'history') {
+        fetchMyHistoryRecords();
+      }
+    });
+  });
+
+  btnSearchMyRecords.addEventListener('click', fetchMyHistoryRecords);
+  btnResetMyFilters.addEventListener('click', () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    myFilterStartDate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    myFilterEndDate.value = now.toISOString().split('T')[0];
+    fetchMyHistoryRecords();
+  });
+  btnExportMyExcel.addEventListener('click', exportMyExcel);
+
+  btnSearchRecords.addEventListener('click', fetchAttendanceRecords);
   btnResetFilters.addEventListener('click', () => {
+
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     filterStartDate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;

@@ -60,80 +60,116 @@
 
       <!-- 2. ATTENDANCE DASHBOARD -->
       <section id="dashboard-section" class="glass-card hidden">
-        <div class="welcome-box">
-          <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
-          <div>
-            <h3>반갑습니다, <span id="user-display-name" class="highlight-text">홍길동</span> 님</h3>
-            <p class="sub-text">사번: <span id="user-display-id">20260001</span></p>
-          </div>
-        </div>
-
-        <!-- Live Clock -->
-        <div class="clock-card">
-          <div id="live-date" class="date-text">2026년 8월 3일 월요일</div>
-          <div id="live-time" class="time-text">12:00:00</div>
-        </div>
-
-        <div class="attendance-action-panel">
-          <h3>근무 형태 선택 및 출근</h3>
-          <p class="shift-guide">기준 시간보다 5분 이상 늦을 경우 지각으로 기록됩니다. (4분 59초까지 정상 출근)</p>
-          
-          <div class="shift-selector">
-            <input type="radio" id="shift-normal" name="shift-type" value="일반" checked>
-            <label for="shift-normal" class="shift-option">
-              <i class="fa-solid fa-sun icon"></i>
-              <span class="label">일반 근무</span>
-              <span class="time">09:30 기준</span>
-            </label>
-
-            <input type="radio" id="shift-day" name="shift-type" value="주간">
-            <label for="shift-day" class="shift-option">
-              <i class="fa-solid fa-cloud-sun icon"></i>
-              <span class="label">주간 근무</span>
-              <span class="time">07:00 기준</span>
-            </label>
-
-            <input type="radio" id="shift-afternoon" name="shift-type" value="오후">
-            <label for="shift-afternoon" class="shift-option">
-              <i class="fa-solid fa-mug-saucer icon"></i>
-              <span class="label">오후 근무</span>
-              <span class="time">12:30 기준</span>
-            </label>
-
-            <input type="radio" id="shift-night" name="shift-type" value="야간">
-            <label for="shift-night" class="shift-option">
-              <i class="fa-solid fa-moon icon"></i>
-              <span class="label">야간 근무</span>
-              <span class="time">21:15 기준</span>
-            </label>
-          </div>
-
-          <button id="check-in-btn" class="btn btn-success btn-lg btn-block">
-            <i class="fa-solid fa-check-double"></i> 출근하기
+        <!-- Dashboard Sub-Tabs Navigation -->
+        <div class="user-tabs" id="user-tabs-nav">
+          <button class="user-tab-btn active" data-user-tab="checkin">
+            <i class="fa-solid fa-check-double"></i> 출근 등록
+          </button>
+          <button class="user-tab-btn" data-user-tab="history">
+            <i class="fa-solid fa-clock-rotate-left"></i> 나의 출근 이력
           </button>
         </div>
 
-        <!-- My Attendance Records (New) -->
-        <div class="my-records-panel">
-          <h4><i class="fa-solid fa-clock-rotate-left"></i> 나의 최근 출근 기록 (최근 10건)</h4>
-          <div class="table-wrapper table-wrapper-sm">
-            <table class="data-table data-table-sm">
+        <!-- Tab 1: Check-in Form -->
+        <div id="user-tab-checkin" class="user-tab-content active">
+          <div class="welcome-box">
+            <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
+            <div>
+              <h3>반갑습니다, <span id="user-display-name" class="highlight-text">홍길동</span> 님</h3>
+              <p class="sub-text">사번: <span id="user-display-id">20260001</span></p>
+            </div>
+          </div>
+
+          <!-- Live Clock -->
+          <div class="clock-card">
+            <div id="live-date" class="date-text">2026년 8월 3일 월요일</div>
+            <div id="live-time" class="time-text">12:00:00</div>
+          </div>
+
+          <div class="attendance-action-panel">
+            <h3>근무 형태 선택 및 출근</h3>
+            <p class="shift-guide">기준 시간보다 5분 이상 늦을 경우 지각으로 기록됩니다. (4분 59초까지 정상 출근)</p>
+            
+            <div class="shift-selector">
+              <input type="radio" id="shift-normal" name="shift-type" value="일반" checked>
+              <label for="shift-normal" class="shift-option">
+                <i class="fa-solid fa-sun icon"></i>
+                <span class="label">일반 근무</span>
+                <span class="time">09:30 기준</span>
+              </label>
+
+              <input type="radio" id="shift-day" name="shift-type" value="주간">
+              <label for="shift-day" class="shift-option">
+                <i class="fa-solid fa-cloud-sun icon"></i>
+                <span class="label">주간 근무</span>
+                <span class="time">07:00 기준</span>
+              </label>
+
+              <input type="radio" id="shift-afternoon" name="shift-type" value="오후">
+              <label for="shift-afternoon" class="shift-option">
+                <i class="fa-solid fa-mug-saucer icon"></i>
+                <span class="label">오후 근무</span>
+                <span class="time">12:30 기준</span>
+              </label>
+
+              <input type="radio" id="shift-night" name="shift-type" value="야간">
+              <label for="shift-night" class="shift-option">
+                <i class="fa-solid fa-moon icon"></i>
+                <span class="label">야간 근무</span>
+                <span class="time">21:15 기준</span>
+              </label>
+            </div>
+
+            <button id="check-in-btn" class="btn btn-success btn-lg btn-block">
+              <i class="fa-solid fa-check-double"></i> 출근하기
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 2: My Attendance History (Matches Admin Dashboard View for self only) -->
+        <div id="user-tab-history" class="user-tab-content hidden">
+          <div class="table-filters" style="margin-top: 15px;">
+            <div class="filter-group">
+              <label>시작일</label>
+              <input type="date" id="my-filter-start-date">
+            </div>
+            <div class="filter-group">
+              <label>종료일</label>
+              <input type="date" id="my-filter-end-date">
+            </div>
+            <div class="filter-actions">
+              <button id="btn-search-my-records" class="btn btn-primary">
+                <i class="fa-solid fa-magnifying-glass"></i> 조회
+              </button>
+              <button id="btn-reset-my-filters" class="btn btn-outline">
+                <i class="fa-solid fa-rotate-left"></i> 초기화
+              </button>
+              <button id="btn-export-my-excel" class="btn btn-success">
+                <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
               <thead>
                 <tr>
-                  <th>출근 일시</th>
+                  <th>출근 일자 및 시각</th>
                   <th>근무 형태</th>
-                  <th>결과</th>
+                  <th>지각 여부</th>
                   <th>지각 사유</th>
+                  <th>접속 IP</th>
                 </tr>
               </thead>
-              <tbody id="my-records-table-body">
+              <tbody id="my-history-table-body">
                 <!-- Dynamic rows -->
               </tbody>
             </table>
-            <div id="my-no-records-msg" class="empty-table hidden">출근 기록이 없습니다.</div>
+            <div id="my-history-no-records-msg" class="empty-table hidden">조회된 기록이 없습니다.</div>
           </div>
         </div>
       </section>
+
 
 
       <!-- 3. ADMIN PANEL -->

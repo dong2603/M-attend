@@ -937,33 +937,47 @@ input:checked + .slider:before {
   }
 }
 
-/* My records panel styles (New) */
-.my-records-panel {
-  margin-top: 30px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.15);
-  padding-top: 20px;
+/* User Sub-Tabs styling (New) */
+.user-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 10px;
 }
 
-.my-records-panel h4 {
-  margin-bottom: 12px;
+.user-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 18px;
   font-size: 0.95rem;
-  color: #a5b4fc;
   font-weight: 600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: all var(--transition-speed);
 }
 
-.table-wrapper-sm {
-  max-height: 250px;
-  overflow-y: auto;
+.user-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.data-table-sm {
-  font-size: 0.8rem !important;
+.user-tab-btn.active {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
 }
 
-.data-table-sm th, .data-table-sm td {
-  padding: 8px 12px !important;
+.user-tab-content.hidden {
+  display: none !important;
 }
+
+.user-tab-content.active {
+  display: block;
+}
+
 
