@@ -104,6 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastIcon = document.getElementById('toast-icon');
   const toastMsg = document.getElementById('toast-msg');
 
+  const myRecordsTableBody = document.getElementById('my-records-table-body');
+  const myNoRecordsMsg = document.getElementById('my-no-records-msg');
+
+
   // --- INITIALIZATION ---
   initApp();
 
@@ -159,7 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     logoutBtn.classList.remove('hidden');
     adminEntryBtn.classList.remove('hidden');
+
+    // 나의 최근 출근 기록 조회
+    fetchMyAttendanceRecords();
   }
+
 
   function showAdminPanel() {
     loginSection.classList.add('hidden');
@@ -550,7 +558,11 @@ document.addEventListener('DOMContentLoaded', () => {
         message: isLate ? '지각 처리되었습니다.' : '출근 완료되었습니다.'
       });
 
+      // 내 출근 기록 실시간 새로고침
+      fetchMyAttendanceRecords();
+
     } catch (err) {
+
       console.error(err);
       showToast('출근 처리 도중 오류가 발생했습니다.', 'error');
     } finally {
@@ -674,8 +686,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 0. Fetch Personal Logs
+  async function fetchMyAttendanceRecords() {
+    if (!currentUser || !supabaseClient) return;
+
+    try {
+      const { data: records, error } = await supabaseClient
+        .from('attendance')
+        .select('*')
+        .eq('employee_id', currentUser.employee_id)
+        .order('check_in_time', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      myRecordsTableBody.innerHTML = '';
+
+      if (!records || records.length === 0) {
+        myNoRecordsMsg.classList.remove('hidden');
+        return;
+      }
+
+      myNoRecordsMsg.classList.add('hidden');
+
+      records.forEach(rec => {
+        const tr = document.createElement('tr');
+        const isLateText = rec.is_late ? '지각' : '정상';
+        const badgeClass = rec.is_late ? 'badge badge-danger' : 'badge badge-success';
+        const lateReasonText = rec.late_reason || '-';
+
+        tr.innerHTML = `
+          <td>${rec.check_in_time}</td>
+          <td>${rec.shift_type}</td>
+          <td><span class="${badgeClass}">${isLateText}</span></td>
+          <td>${lateReasonText}</td>
+        `;
+        myRecordsTableBody.appendChild(tr);
+      });
+
+    } catch (err) {
+      console.error('내 출근 기록 로드 실패:', err);
+    }
+  }
+
   // 1. Fetch Logs
   async function fetchAttendanceRecords() {
+
     const startDate = filterStartDate.value;
     const endDate = filterEndDate.value;
     const empName = filterEmpName.value.trim();

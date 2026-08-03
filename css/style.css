@@ -936,3 +936,34 @@ input:checked + .slider:before {
     justify-content: flex-start;
   }
 }
+
+/* My records panel styles (New) */
+.my-records-panel {
+  margin-top: 30px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  padding-top: 20px;
+}
+
+.my-records-panel h4 {
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  color: #a5b4fc;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-wrapper-sm {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.data-table-sm {
+  font-size: 0.8rem !important;
+}
+
+.data-table-sm th, .data-table-sm td {
+  padding: 8px 12px !important;
+}
+
