@@ -603,12 +603,14 @@ textarea:focus {
   border-collapse: collapse;
   text-align: left;
   font-size: 0.95rem;
+  min-width: 950px; /* Force minimum width to prevent column squishing */
 }
 
 .data-table th,
 .data-table td {
   padding: 14px 18px;
   border-bottom: 1px solid var(--card-border);
+  white-space: nowrap !important; /* Strictly forbid line breaks */
 }
 
 .data-table th {
@@ -979,5 +981,46 @@ input:checked + .slider:before {
 .user-tab-content.active {
   display: block;
 }
+
+/* Admin Action Buttons in Table */
+.action-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action-edit {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.btn-action-edit:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
+}
+
+.btn-action-delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.btn-action-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+}
+
 
 

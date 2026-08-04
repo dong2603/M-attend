@@ -104,6 +104,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastIcon = document.getElementById('toast-icon');
   const toastMsg = document.getElementById('toast-msg');
 
+  // Admin Attendance CRUD elements
+  const btnAddRecordModal = document.getElementById('btn-add-record-modal');
+  const adminRecordModal = document.getElementById('admin-record-modal');
+  const adminModalTitle = document.getElementById('admin-modal-title');
+  const adminModalEmpSelect = document.getElementById('admin-modal-emp-select');
+  const adminModalTime = document.getElementById('admin-modal-time');
+  const adminModalShift = document.getElementById('admin-modal-shift');
+  const adminModalReasonGroup = document.getElementById('admin-modal-reason-group');
+  const adminModalReason = document.getElementById('admin-modal-reason');
+  const btnAdminModalCancel = document.getElementById('btn-admin-modal-cancel');
+  const btnAdminModalSave = document.getElementById('btn-admin-modal-save');
+
+  let editingRecordId = null; // 수정 중인 기록 ID (null 이면 추가 모드)
+
+
   // Personal history navigation and elements
   const userTabsNav = document.getElementById('user-tabs-nav');
   const userTabButtons = document.querySelectorAll('.user-tab-btn');
@@ -859,10 +874,33 @@ document.addEventListener('DOMContentLoaded', () => {
         <td><span class="${badgeClass}">${isLateText}</span></td>
         <td>${lateReasonText}</td>
         <td><code>${rec.ip_address || '-'}</code></td>
+        <td>
+          <div class="action-btn-group">
+            <button class="btn-action-edit" data-id="${rec.id}">수정</button>
+            <button class="btn-action-delete" data-id="${rec.id}">삭제</button>
+          </div>
+        </td>
       `;
       attendanceTableBody.appendChild(tr);
     });
+
+    // 수정 버튼 클릭 바인딩
+    attendanceTableBody.querySelectorAll('.btn-action-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recordId = parseInt(btn.dataset.id);
+        openAdminEditModal(recordId);
+      });
+    });
+
+    // 삭제 버튼 클릭 바인딩
+    attendanceTableBody.querySelectorAll('.btn-action-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recordId = parseInt(btn.dataset.id);
+        deleteAttendanceRecord(recordId);
+      });
+    });
   }
+
 
   // 근무자용 하부 탭 버튼 바인딩 및 개인 리스너 등록
   userTabButtons.forEach(btn => {
@@ -907,6 +945,181 @@ document.addEventListener('DOMContentLoaded', () => {
     filterEmpName.value = '';
     fetchAttendanceRecords();
   });
+
+  // --- ADMIN ATTENDANCE CRUD SERVICES ---
+
+  // 1. 사원 드롭다운 목록 가져오기
+  async function loadEmployeesToSelect() {
+    try {
+      const { data: emps, error } = await supabaseClient
+        .from('employees')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      
+      adminModalEmpSelect.innerHTML = '';
+      emps.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.employee_id;
+        opt.dataset.name = emp.name;
+        opt.textContent = `${emp.name} (${emp.employee_id})`;
+        adminModalEmpSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('사원 목록 로드 실패:', err);
+    }
+  }
+
+  // 2. 신규 등록 모달 열기
+  async function openAdminAddModal() {
+    editingRecordId = null;
+    adminModalTitle.textContent = '출근 기록 신규 등록';
+    adminModalEmpSelect.disabled = false;
+    
+    await loadEmployeesToSelect();
+    
+    // 현재 날짜/시간 포맷팅 (YYYY-MM-DD HH:MM:SS)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const checkInStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    adminModalTime.value = checkInStr;
+    
+    adminModalShift.value = '일반';
+    document.querySelector('input[name="admin-modal-late"][value="false"]').checked = true;
+    adminModalReason.value = '';
+    adminModalReasonGroup.style.display = 'none';
+    
+    adminRecordModal.classList.remove('hidden');
+  }
+
+  // 3. 수정 모달 열기
+  async function openAdminEditModal(recordId) {
+    editingRecordId = recordId;
+    adminModalTitle.textContent = '출근 기록 수정';
+    
+    const record = attendanceRecords.find(r => r.id === recordId);
+    if (!record) return;
+
+    adminModalEmpSelect.innerHTML = `<option value="${record.employee_id}">${record.name} (${record.employee_id})</option>`;
+    adminModalEmpSelect.disabled = true;
+
+    adminModalTime.value = record.check_in_time;
+    adminModalShift.value = record.shift_type;
+    
+    const isLate = record.is_late === true;
+    document.querySelector(`input[name="admin-modal-late"][value="${isLate}"]`).checked = true;
+    
+    adminModalReason.value = record.late_reason || '';
+    adminModalReasonGroup.style.display = isLate ? 'flex' : 'none';
+    
+    adminRecordModal.classList.remove('hidden');
+  }
+
+  // 4. 레코드 삭제 기능
+  async function deleteAttendanceRecord(recordId) {
+    const record = attendanceRecords.find(r => r.id === recordId);
+    const nameStr = record ? `[${record.name}] 사원의 ` : '';
+    if (!confirm(`⚠️ 정말로 ${nameStr}출근 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabaseClient
+        .from('attendance')
+        .delete()
+        .eq('id', recordId);
+
+      if (error) throw error;
+      showToast('성공적으로 삭제되었습니다.', 'success');
+      fetchAttendanceRecords();
+    } catch (err) {
+      console.error(err);
+      showToast('출근 기록 삭제 실패', 'error');
+    }
+  }
+
+  // 5. 모달 내 지각 라디오 버튼 토글 리스너
+  document.querySelectorAll('input[name="admin-modal-late"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const isLate = e.target.value === 'true';
+      adminModalReasonGroup.style.display = isLate ? 'flex' : 'none';
+    });
+  });
+
+  // 6. 모달 취소 및 추가 버튼 바인딩
+  btnAdminModalCancel.addEventListener('click', () => {
+    adminRecordModal.classList.add('hidden');
+  });
+
+  btnAddRecordModal.addEventListener('click', openAdminAddModal);
+
+  // 7. 모달 저장/수정 완료 클릭 리스너
+  btnAdminModalSave.addEventListener('click', async () => {
+    const checkInTime = adminModalTime.value.trim();
+    const shiftType = adminModalShift.value;
+    const isLate = document.querySelector('input[name="admin-modal-late"]:checked').value === 'true';
+    const lateReason = isLate ? adminModalReason.value.trim() : null;
+
+    if (!checkInTime) {
+      showToast('출근 일자 및 시각을 입력해 주세요.', 'error');
+      return;
+    }
+
+    try {
+      btnAdminModalSave.disabled = true;
+      btnAdminModalSave.textContent = '저장 중...';
+
+      if (editingRecordId === null) {
+        // [INSERT] 신규 등록
+        const selectedOpt = adminModalEmpSelect.options[adminModalEmpSelect.selectedIndex];
+        if (!selectedOpt) {
+          showToast('사원을 선택해 주세요.', 'error');
+          return;
+        }
+        const employeeId = selectedOpt.value;
+        const name = selectedOpt.dataset.name;
+
+        const { error } = await supabaseClient
+          .from('attendance')
+          .insert([{
+            employee_id: employeeId,
+            name: name,
+            shift_type: shiftType,
+            check_in_time: checkInTime,
+            is_late: isLate,
+            late_reason: lateReason,
+            ip_address: '관리자 수동 등록'
+          }]);
+
+        if (error) throw error;
+        showToast('새 근태 기록이 등록되었습니다.', 'success');
+      } else {
+        // [UPDATE] 기존 수정
+        const { error } = await supabaseClient
+          .from('attendance')
+          .update({
+            check_in_time: checkInTime,
+            shift_type: shiftType,
+            is_late: isLate,
+            late_reason: lateReason
+          })
+          .eq('id', editingRecordId);
+
+        if (error) throw error;
+        showToast('근태 기록이 수정되었습니다.', 'success');
+      }
+
+      adminRecordModal.classList.add('hidden');
+      fetchAttendanceRecords();
+    } catch (err) {
+      console.error(err);
+      showToast('저장 도중 오류가 발생했습니다.', 'error');
+    } finally {
+      btnAdminModalSave.disabled = false;
+      btnAdminModalSave.textContent = '저장 완료';
+    }
+  });
+
 
 
 

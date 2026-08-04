@@ -219,8 +219,10 @@
               <div class="filter-actions">
                 <button id="btn-search-records" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
                 <button id="btn-reset-filters" class="btn btn-outline"><i class="fa-solid fa-rotate-left"></i> 초기화</button>
+                <button id="btn-add-record-modal" class="btn btn-success" style="background-color: #3b82f6; border-color: #3b82f6;"><i class="fa-solid fa-plus"></i> 기록 추가</button>
                 <button id="btn-export-excel" class="btn btn-success"><i class="fa-solid fa-file-excel"></i> 엑셀 다운로드</button>
               </div>
+
             </div>
 
             <div class="table-wrapper">
@@ -234,8 +236,10 @@
                     <th>지각 여부</th>
                     <th>지각 사유</th>
                     <th>접속 IP</th>
+                    <th>관리</th>
                   </tr>
                 </thead>
+
                 <tbody id="attendance-table-body">
                   <!-- Dynamic rows -->
                 </tbody>
@@ -372,6 +376,60 @@
       <button id="btn-submit-late" class="btn btn-primary btn-block">사유 등록 및 출근 완료</button>
     </div>
   </div>
+
+  <!-- Admin Attendance CRUD Modal (New) -->
+  <div id="admin-record-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="admin-modal-title">출근 기록 추가/수정</h3>
+      <div class="modal-body" style="text-align: left; display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+        
+        <div class="input-group">
+          <label for="admin-modal-emp-select"><i class="fa-solid fa-user"></i> 근무자 선택</label>
+          <select id="admin-modal-emp-select" style="width: 100%; padding: 10px; background: rgba(15,23,42,0.6); border: 1px solid var(--card-border); color: white; border-radius: 12px; font-size: 0.95rem; outline: none;">
+            <!-- Dynamic binding -->
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="admin-modal-time"><i class="fa-solid fa-clock"></i> 출근 일자 및 시각</label>
+          <input type="text" id="admin-modal-time" placeholder="예: 2026-08-04 09:30:00" style="width: 100%;">
+        </div>
+
+        <div class="input-group">
+          <label for="admin-modal-shift"><i class="fa-solid fa-business-time"></i> 근무 형태</label>
+          <select id="admin-modal-shift" style="width: 100%; padding: 10px; background: rgba(15,23,42,0.6); border: 1px solid var(--card-border); color: white; border-radius: 12px; font-size: 0.95rem; outline: none;">
+            <option value="일반">일반 근무 (09:30)</option>
+            <option value="주간">주간 근무 (07:00)</option>
+            <option value="오후">오후 근무 (12:30)</option>
+            <option value="야간">야간 근무 (21:15)</option>
+          </select>
+        </div>
+
+        <div class="input-group" style="flex-direction: row; align-items: center; justify-content: space-between; margin-top: 5px;">
+          <label><i class="fa-solid fa-circle-exclamation"></i> 지각 여부</label>
+          <div style="display: flex; gap: 15px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: white;">
+              <input type="radio" name="admin-modal-late" value="false" checked> 정상
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: white;">
+              <input type="radio" name="admin-modal-late" value="true"> 지각
+            </label>
+          </div>
+        </div>
+
+        <div class="input-group" id="admin-modal-reason-group">
+          <label for="admin-modal-reason"><i class="fa-solid fa-pen"></i> 지각 사유</label>
+          <input type="text" id="admin-modal-reason" placeholder="지각 사유를 입력하세요." style="width: 100%;">
+        </div>
+
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button id="btn-admin-modal-cancel" class="btn btn-outline" style="flex: 1; padding: 12px;">취소</button>
+        <button id="btn-admin-modal-save" class="btn btn-primary" style="flex: 1; padding: 12px;">저장 완료</button>
+      </div>
+    </div>
+  </div>
+
 
 
   <!-- Toast Notification -->
