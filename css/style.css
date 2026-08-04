@@ -35,8 +35,10 @@ body {
   font-family: var(--font-main);
   min-height: 100vh;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
+  padding: 40px 0;
   overflow-x: hidden;
   position: relative;
 }
@@ -77,7 +79,7 @@ body {
 /* App Container */
 .app-container {
   width: 100%;
-  max-width: 950px;
+  max-width: 1250px; /* Stretch outer wrap to match the 1200px large card */
   min-height: 90vh;
   padding: 20px;
   display: flex;
