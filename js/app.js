@@ -906,6 +906,8 @@ document.addEventListener('DOMContentLoaded', () => {
   userTabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.userTab;
+      if (!target) return; // Skip tab switching if it is an external link
+      
       userTabButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       
