@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!name || !employeeId) return;
 
     try {
-      // Find employee in Supabase
+      // Find employee in Supabase (strictly matching both name and ID)
       const { data: employee, error } = await supabaseClient
         .from('employees')
         .select('*')
@@ -376,36 +376,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) throw error;
 
       if (!employee) {
-        // Check if employee ID is already used by someone else
-        const { data: idExists, error: existError } = await supabaseClient
-          .from('employees')
-          .select('employee_id')
-          .eq('employee_id', employeeId)
-          .maybeSingle();
-
-        if (existError) throw existError;
-
-        if (idExists) {
-          showToast('이미 등록된 사번입니다. 이름이 일치하지 않습니다.', 'error');
-          return;
-        }
-
-        // Auto-Register new employee
-        const { data: newEmployee, error: regError } = await supabaseClient
-          .from('employees')
-          .insert([{ employee_id: employeeId, name: name }])
-          .select()
-          .single();
-
-        if (regError) throw regError;
-        
-        currentUser = newEmployee;
-        showToast('신규 직원으로 자동 등록되었습니다.', 'success');
-      } else {
-        currentUser = employee;
+        showToast('등록된 이름 또는 사번이 일치하지 않습니다.', 'error');
+        return;
       }
 
+      currentUser = employee;
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
       showDashboard();
       showToast('로그인되었습니다.', 'success');
       empNameInput.value = '';
@@ -1144,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderEmployeeTable(employees) {
     employeeTableBody.innerHTML = '';
     if (employees.length === 0) {
-      employeeTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">등록된 직원이 없습니다.</td></tr>';
+      employeeTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">등록된 직원이 없습니다.</td></tr>';
       return;
     }
 
@@ -1155,9 +1132,43 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${emp.employee_id}</td>
         <td>${emp.name}</td>
         <td>${regDate}</td>
+        <td>
+          <button class="btn-action-delete btn-delete-employee" data-id="${emp.employee_id}" data-name="${emp.name}">삭제</button>
+        </td>
       `;
       employeeTableBody.appendChild(tr);
     });
+
+    // 직원 삭제 버튼 클릭 바인딩
+    employeeTableBody.querySelectorAll('.btn-delete-employee').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const empId = btn.dataset.id;
+        const empName = btn.dataset.name;
+        deleteEmployee(empId, empName);
+      });
+    });
+  }
+
+  // 직원 삭제 비즈니스 로직
+  async function deleteEmployee(employeeId, name) {
+    if (!confirm(`⚠️ 정말로 [${name} (${employeeId})] 직원을 사원 목록에서 삭제하시겠습니까?\n해당 직원은 더 이상 로그인 및 출근할 수 없게 됩니다.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabaseClient
+        .from('employees')
+        .delete()
+        .eq('employee_id', employeeId);
+
+      if (error) throw error;
+      
+      showToast('직원이 정상적으로 삭제되었습니다.', 'success');
+      fetchEmployees(); // 직원 목록 새로고침
+    } catch (err) {
+      console.error(err);
+      showToast('직원 삭제 중 오류가 발생했습니다.', 'error');
+    }
   }
 
   // Register New Employee 수동
